@@ -1,8 +1,22 @@
 const IncomingForm = require("formidable").IncomingForm;
-var xlsx = require('node-xlsx').default;// exports.converter = (file) => {
+const xlsx = require('node-xlsx').default;
+const mongoose = require('mongoose')
+// exports.converter = (file) => {
 //   let workbook = XLSX.readFile(file)
 //   console.log(workbook)
 // }
+exports.computeCarbonFootprint = (array) => {
+  MongoClient.connect(url, function(err, db) {
+    if (err) throw err;
+    var dbo = db.db("mydb");
+    var query = { address: "Park Lane 38" };
+    dbo.collection("customers").find(query).toArray(function(err, result) {
+      if (err) throw err;
+      console.log(result);
+      db.close();
+    });
+  });
+}
 
 exports.upload = async (req, res) => {
   var form = new IncomingForm();
