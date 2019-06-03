@@ -5,56 +5,75 @@ require('./models/Ingredient')
 const Ingredient = mongoose.model('Ingredient')
 
 
-// exports.converter = (file) => {
-//   let workbook = XLSX.readFile(file)
-//   console.log(workbook)
-// }
-exports.computeCarbonFootprint = (array) => {
-  MongoClient.connect(url, function(err, db) {
-    if (err) throw err;
-    var dbo = db.db("mydb");
-    var query = { address: "Park Lane 38" };
-    dbo.collection("customers").find(query).toArray(function(err, result) {
-      if (err) throw err;
-      console.log(result);
-      db.close();
-    });
-  });
+
+
+
+exports.regEx = async (array) => {
+  let recipeImpact = []
+
+  async function asyncForEach(array, total, callback) {
+    for (let index = 0; index < array.length; index++) {
+      await callback(array[index], index, array);
+    }
+  }
+
+  const start = async () => {
+    let total = {
+      Land_use: 0,
+      GHG: 0,
+      Acid: 0,
+      Eutr: 0,
+      Freshwater: 0
+    }
+    await asyncForEach(array, total, async (line)=> {
+
+      let food = line[0].split(/\W/)[0]
+      food = food.charAt(0).toUpperCase() + food.slice(1);
+      let regexFood = new RegExp(`${food}\\w*`)
+      let quantity = line[1] / 1000
+      const loadedIngredient = await Ingredient.findOne( { 'Product': regexFood })
+      if (loadedIngredient) {
+        total.Land_use = total.Land_use + parseFloat(loadedIngredient.Land_use * quantity)
+        total.GHG = total.GHG + parseFloat(loadedIngredient.GHG * quantity)
+        total.Acid = total.Acid + parseFloat(loadedIngredient.Acid * quantity)
+        total.Eutr = total.Eutr + parseFloat(loadedIngredient.Eutr * quantity)
+        total.Freshwater = total.Freshwater + parseFloat(loadedIngredient.Freshwater * quantity)
+        let weightedImpact = {
+          _id: loadedIngredient._id,
+          Product: loadedIngredient.Product,
+          Land_use: loadedIngredient.Land_use * quantity,
+          GHG: loadedIngredient.GHG * quantity,
+          Acid: loadedIngredient.Acid * quantity,
+          Eutr: loadedIngredient.Eutr * quantity,
+          Freshwater: loadedIngredient.Freshwater * quantity
+        }
+        recipeImpact.push(weightedImpact) 
+      }   
+    })
+    recipeImpact.push(total)
+    return recipeImpact
+  }
+  start()
 }
 
 exports.upload = async (req, res) => {
-  var form = new IncomingForm();
+  const form = new IncomingForm();
+  let myArr = []
 
-  form.on("file", (field, file) => {
+  form.on("file", async (field, file) => {
     let myData =  xlsx.parse(file.path, file)
-    let myArr = []
       myData[0].data.forEach((line) => {
          if(line.includes('gram' || 'ml')) {
          myArr.push(line.filter(function (el) { return el != null }))
        }
     })
 
-    let recipeImpact = []
-
-  myArr.forEach((line)=> {
-      let food = line[0].split(/\W/)[0]
-      food = food.charAt(0).toUpperCase() + food.slice(1);
-      let regexFood = new RegExp(`${food}\\w*`)
-      let quantity = line [1]
-      Ingredient.findOne( { 'Product': regexFood }, function (err, ingredient){
-        (ingredient ? recipeImpact.push(ingredient) : "")
-      })
-  })
   
-  async function Impact() {
-    const finalRecipe = await recipeImpact
-    console.log(finalRecipe)
-  }
-  Impact()
+
   });
   form.on("end", () => {
-    res.json();
+    
   });
   form.parse(req);
-  
+  res.json(exports.regEx(myArr))
 };
