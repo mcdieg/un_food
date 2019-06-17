@@ -17,7 +17,7 @@ var corsOptions = {
 
 server.use(cors(corsOptions));
 
-server.get("/upload", upload.upload);
+server.post("/upload", upload.upload);
 
 server.use(function(req, res, next) {
   next(createError(404));
