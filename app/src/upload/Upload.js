@@ -2,6 +2,7 @@ import React, { Component } from "react";
 import Dropzone from "../dropzone/Dropzone";
 import "./Upload.css";
 import Progress from "../progress/Progress";
+import axios from 'axios';
 
 class Upload extends Component {
   constructor(props) {
@@ -10,7 +11,8 @@ class Upload extends Component {
       files: [],
       uploading: false,
       uploadProgress: {},
-      successfullUploaded: false
+      successfullUploaded: false,
+      data: []
     };
 
     this.onFilesAdded = this.onFilesAdded.bind(this);
@@ -41,7 +43,7 @@ class Upload extends Component {
     }
   }
 
-  sendRequest(file) {
+  async sendRequest(file) {
     return new Promise((resolve, reject) => {
       const req = new XMLHttpRequest();
 
@@ -73,9 +75,21 @@ class Upload extends Component {
       const formData = new FormData();
       formData.append("file", file, file.name);
       console.log(file)
-      req.open("POST", "http://localhost:8000/upload");
-      req.send(formData);
-      console.log(req.response)
+
+      let currentComponent = this; 
+      axios({
+        method: 'post',
+        url: 'http://localhost:8000/upload',
+        data: formData,
+        config: { headers: { 'Content-type': 'multipart/form-data'}}   
+      })
+      .then(function(response){
+        currentComponent.setState({ data: JSON.stringify(response)})
+        console.log(currentComponent.state.data)
+      })
+      .catch(function(response){
+        console.log(response)
+      })
     });
   }
 
