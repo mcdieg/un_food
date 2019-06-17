@@ -8,58 +8,57 @@ const Ingredient = mongoose.model('Ingredient')
 
 
 
-exports.regEx = async (array) => {
-  let recipeImpact = []
-
-  async function asyncForEach(array, total, callback) {
-    for (let index = 0; index < array.length; index++) {
-      await callback(array[index], index, array);
-    }
-  }
+exports.regEx = async (lines) => {
 
   const start = async () => {
-    let total = {
+    const characteristics = {
       Land_use: 0,
       GHG: 0,
       Acid: 0,
       Eutr: 0,
       Freshwater: 0
     }
-    await asyncForEach(array, total, async (line)=> {
 
+    let total = characteristics
+
+    const results = lines.map(async (line) => {
       let food = line[0].split(/\W/)[0]
       food = food.charAt(0).toUpperCase() + food.slice(1);
       let regexFood = new RegExp(`${food}\\w*`)
       let quantity = line[1] / 1000
-      const loadedIngredient = await Ingredient.findOne( { 'Product': regexFood })
-      if (loadedIngredient) {
-        total.Land_use = total.Land_use + parseFloat(loadedIngredient.Land_use * quantity)
-        total.GHG = total.GHG + parseFloat(loadedIngredient.GHG * quantity)
-        total.Acid = total.Acid + parseFloat(loadedIngredient.Acid * quantity)
-        total.Eutr = total.Eutr + parseFloat(loadedIngredient.Eutr * quantity)
-        total.Freshwater = total.Freshwater + parseFloat(loadedIngredient.Freshwater * quantity)
-        let weightedImpact = {
-          _id: loadedIngredient._id,
-          Product: loadedIngredient.Product,
-          Land_use: loadedIngredient.Land_use * quantity,
-          GHG: loadedIngredient.GHG * quantity,
-          Acid: loadedIngredient.Acid * quantity,
-          Eutr: loadedIngredient.Eutr * quantity,
-          Freshwater: loadedIngredient.Freshwater * quantity
+
+      return Ingredient.findOne( { 'Product': regexFood }).then((loadedIngredient) => {
+        if (loadedIngredient) {
+          Object.entries(characteristics).forEach((characteristic) => {
+            loadedIngredient[characteristic[0]] *= quantity
+          })
+          return loadedIngredient
+        } else {
+          return null
         }
-        recipeImpact.push(weightedImpact) 
-      }   
+      })
     })
-    recipeImpact.push(total)
-    return recipeImpact
+
+    let finalResult = await Promise.all(results)
+    finalResult = finalResult.filter(e => e != null);
+    console.log(total.Land_use)
+    finalResult.forEach((element) => {
+      total.Land_use += parseFloat(element.Land_use)
+      total.Eutr += parseFloat(element.Eutr)
+      total.Acid += parseFloat(element.Acid)
+      total.GHG += parseFloat(element.GHG)
+      total.Freshwater += parseFloat(element.Freshwater)
+    })
+    finalResult.push(total)
+    console.log(total)
+    return finalResult
   }
-  start()
+  return start();
 }
 
 exports.upload = async (req, res) => {
   const form = new IncomingForm();
   let myArr = []
-
   form.on("file", async (field, file) => {
     let myData =  xlsx.parse(file.path, file)
       myData[0].data.forEach((line) => {
@@ -68,12 +67,11 @@ exports.upload = async (req, res) => {
        }
     })
 
-  
-
   });
-  form.on("end", () => {
-    
+  form.on("end", async () => {
+    const finalData = await exports.regEx(myArr)
+    res.send(finalData)
   });
   form.parse(req);
-  res.json(exports.regEx(myArr))
+
 };
