@@ -20,7 +20,8 @@ class Upload extends Component {
       uploading: false,
       uploadProgress: {},
       successfullUploaded: false,
-      data: []
+      data: [],
+      display: ""
     };
 
     this.onFilesAdded = this.onFilesAdded.bind(this);
@@ -34,6 +35,7 @@ class Upload extends Component {
       files: prevState.files.concat(files)
     }));
   }
+
 
   async uploadFiles() {
     this.setState({ uploadProgress: {}, uploading: true });
@@ -100,7 +102,10 @@ class Upload extends Component {
       })
     });
   }
-   
+  
+  show(){
+    this.setState({ display: 'none' })
+  }
 
   renderProgress(file) {
     const uploadProgress = this.state.uploadProgress[file.name];
@@ -151,7 +156,7 @@ class Upload extends Component {
     if (this.state.data.length !== 0) {
       console.log(this.state.data)
       
-      graph = <Route path="/example" render={(props) => <Radar {...props} data={this.state.data} />}/>
+      graph = <Route path="/radar" render={(props) => <Radar {...props} data={this.state.data} />}/>
     } else {
       graph = ""
     }
@@ -183,11 +188,16 @@ class Upload extends Component {
         </div>
           <div className="Actions">
             {this.renderActions()}
-          </div>
-          <div className="Actions">
-            <NavLink to="/example">
+            <NavLink to="/radar" onClick={()=> this.setState({display: "none"})} style={{display:this.state.display}}>
               <button disabled={this.state.data.length === 0}>
             Access report
+              </button>
+            </NavLink>
+            <NavLink to="/">
+              <button disabled={this.state.data.length === 0} onClick={() =>
+            this.setState({ files: [], successfullUploaded: false, data: [], uploading: false, uploadProgress: {}, display: ""}) 
+          } style={this.state.display.length == 0 ? {display: "none"} : {display: ""} }>     
+            Get another report
               </button>
             </NavLink>
           </div>
