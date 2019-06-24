@@ -3,6 +3,14 @@ import Dropzone from "../dropzone/Dropzone";
 import "./Upload.css";
 import Progress from "../progress/Progress";
 import axios from 'axios';
+import {
+  Route,
+  NavLink,
+  HashRouter
+} from "react-router-dom";
+import Radar from "../radar/RadarChart";
+
+
 
 class Upload extends Component {
   constructor(props) {
@@ -84,7 +92,7 @@ class Upload extends Component {
         config: { headers: { 'Content-type': 'multipart/form-data'}}   
       })
       .then(function(response){
-        currentComponent.setState({ data: JSON.stringify(response)})
+        currentComponent.setState({ data: (response)})
         console.log(currentComponent.state.data)
       })
       .catch(function(response){
@@ -92,6 +100,7 @@ class Upload extends Component {
       })
     });
   }
+   
 
   renderProgress(file) {
     const uploadProgress = this.state.uploadProgress[file.name];
@@ -137,9 +146,19 @@ class Upload extends Component {
   }
 
   render() {
+    let graph;
+
+    if (this.state.data.length !== 0) {
+      console.log(this.state.data)
+      
+      graph = <Route path="/example" render={(props) => <Radar {...props} data={this.state.data} />}/>
+    } else {
+      graph = ""
+    }
+
     return (
       <div className="Upload">
-        <span className="Title">Upload Files</span>
+        <span className="Title">Upload Menu (XLS file)</span>
         <div className="Content">
           <div>
             <Dropzone
@@ -158,7 +177,21 @@ class Upload extends Component {
             })}
           </div>
         </div>
-        <div className="Actions">{this.renderActions()}</div>
+        <HashRouter>
+            {graph}
+        <div>
+        </div>
+          <div className="Actions">
+            {this.renderActions()}
+          </div>
+          <div className="Actions">
+            <NavLink to="/example">
+              <button disabled={this.state.data.length === 0}>
+            Access report
+              </button>
+            </NavLink>
+          </div>
+        </HashRouter>
       </div>
     );
   }
